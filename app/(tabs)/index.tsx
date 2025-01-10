@@ -1,74 +1,261 @@
-import { Image, StyleSheet, Platform } from 'react-native';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Image,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { analyzePhoto } from "../../services/aiService";
+import { Ionicons } from "@expo/vector-icons";
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+interface ImageAsset {
+  uri: string;
+  width: number;
+  height: number;
+}
 
-export default function HomeScreen() {
+interface FeedbackData {
+  positives: string[];
+  suggestions: string[];
+}
+
+export default function TabOneScreen() {
+  const [selectedImage, setSelectedImage] = useState<ImageAsset | null>(null);
+  const [feedback, setFeedback] = useState<FeedbackData | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleImageSelection = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      alert("Sorry, we need camera roll permissions to make this work!");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 1,
+      allowsEditing: true,
+      aspect: [4, 3],
+    });
+
+    if (!result.canceled && result.assets && result.assets.length > 0) {
+      const asset = result.assets[0];
+      setSelectedImage({
+        uri: asset.uri,
+        width: asset.width || 0,
+        height: asset.height || 0,
+      });
+      setFeedback(null);
+    }
+  };
+
+  const analyzeImage = async () => {
+    if (!selectedImage) return;
+
+    setLoading(true);
+    try {
+      const response = await analyzePhoto(selectedImage);
+      setFeedback(response);
+    } catch (error) {
+      console.error("Error analyzing photo:", error);
+      setFeedback({
+        positives: ["Error analyzing photo"],
+        suggestions: ["Please try again"],
+      });
+    }
+    setLoading(false);
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12'
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          Tap the Explore tab to learn more about what's included in this starter app.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          When you're ready, run{' '}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+    <ScrollView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.title}>Photo Feedback</Text>
+        <Text style={styles.titleAI}>AI</Text>
+      </View>
+
+      <Text style={styles.subtitle}>
+        Get professional feedback on your photos using AI
+      </Text>
+
+      {!selectedImage ? (
+        <TouchableOpacity
+          style={styles.selectButton}
+          onPress={handleImageSelection}
+        >
+          <Text style={styles.selectButtonText}>Select Image</Text>
+        </TouchableOpacity>
+      ) : (
+        <View>
+          <View style={styles.imageContainer}>
+            <Image
+              source={{ uri: selectedImage.uri }}
+              style={styles.selectedImage}
+              resizeMode="contain"
+            />
+            <TouchableOpacity
+              style={styles.changeImageButton}
+              onPress={handleImageSelection}
+            >
+              <Text style={styles.changeImageText}>Change Image</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={styles.analyzeButton} onPress={analyzeImage}>
+            <Text style={styles.analyzeButtonText}>
+              {loading ? "Analyzing..." : "Analyze with AI"}
+            </Text>
+          </TouchableOpacity>
+
+          {feedback && (
+            <View style={styles.feedbackContainer}>
+              <View style={styles.feedbackSection}>
+                <View style={styles.feedbackHeader}>
+                  <Ionicons name="thumbs-up" size={24} color="#4CAF50" />
+                  <Text style={styles.feedbackTitle}>What's Great</Text>
+                </View>
+                {feedback.positives.map((positive, index) => (
+                  <Text key={`positive-${index}`} style={styles.feedbackText}>
+                    {positive}
+                  </Text>
+                ))}
+              </View>
+
+              <View style={[styles.feedbackSection, styles.suggestionsSection]}>
+                <View style={styles.feedbackHeader}>
+                  <Ionicons name="bulb" size={24} color="#5B5CFF" />
+                  <Text style={styles.feedbackTitle}>Suggestions</Text>
+                </View>
+                {feedback.suggestions.map((suggestion, index) => (
+                  <Text key={`suggestion-${index}`} style={styles.feedbackText}>
+                    {suggestion}
+                  </Text>
+                ))}
+              </View>
+            </View>
+          )}
+        </View>
+      )}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: "#fff",
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  header: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "baseline",
+    marginTop: 40,
+    marginBottom: 20,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  title: {
+    fontSize: 40,
+    fontWeight: "bold",
+  },
+  titleAI: {
+    fontSize: 40,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
+  subtitle: {
+    fontSize: 24,
+    color: "#666",
+    textAlign: "center",
+    marginBottom: 40,
+  },
+  selectButton: {
+    backgroundColor: "#5B5CFF",
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 12,
+    alignItems: "center",
+    marginTop: 20,
+  },
+  selectButtonText: {
+    fontSize: 18,
+    color: "#fff",
+    fontWeight: "600",
+  },
+  imageContainer: {
+    width: "100%",
+    height: 400,
+    marginBottom: 20,
+    borderRadius: 12,
+    overflow: "hidden",
+    position: "relative",
+  },
+  selectedImage: {
+    width: "100%",
+    height: "100%",
+  },
+  changeImageButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  changeImageText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  analyzeButton: {
+    backgroundColor: "#5B5CFF",
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  analyzeButtonText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "600",
+  },
+  feedbackContainer: {
+    marginTop: 20,
+  },
+  feedbackSection: {
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  suggestionsSection: {
+    marginTop: 10,
+  },
+  feedbackHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 16,
+  },
+  feedbackTitle: {
+    fontSize: 24,
+    fontWeight: "600",
+    marginLeft: 12,
+  },
+  feedbackText: {
+    fontSize: 18,
+    color: "#333",
+    marginBottom: 12,
+    lineHeight: 26,
   },
 });
