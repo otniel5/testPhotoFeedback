@@ -66,13 +66,16 @@ function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-export const analyzePhoto = async (photo: { uri: string }) => {
+export const analyzePhoto = async (
+  photo: { uri: string },
+  language: string
+) => {
   try {
     console.log("Starting photo analysis with URI:", photo.uri);
     const imagePart = await fileToGenerativePart(photo.uri);
     console.log("Image converted successfully to GenerativePart");
 
-    const prompt = `Share 2 things that work well in this photo and 3 quick tips to make it even better:.
+    const prompt = `Share 2 things that work well in this photo and 3 quick tips to make it even better, in short and clear:.
     Return the feedback exactly in this format:
     Positives:
     - [Positive aspect 1]

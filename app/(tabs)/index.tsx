@@ -23,11 +23,20 @@ interface FeedbackData {
   suggestions: string[];
 }
 
+interface Language {
+  code: "en" | "he";
+  direction: "ltr" | "rtl";
+}
+
 export default function Index() {
   const [selectedImage, setSelectedImage] = useState<ImageAsset | null>(null);
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [language, setLanguage] = useState<Language>({
+    code: "en",
+    direction: "ltr",
+  });
 
   const handleImageSelection = async () => {
     try {
@@ -75,7 +84,7 @@ export default function Index() {
     setLoading(true);
     setError(null);
     try {
-      const response = await analyzePhoto(selectedImage);
+      const response = await analyzePhoto(selectedImage, language.code);
       if (
         response.positives.length === 0 &&
         response.suggestions.length === 0
@@ -85,22 +94,48 @@ export default function Index() {
       setFeedback(response);
     } catch (error) {
       console.error("Error analyzing photo:", error);
-      setError("Failed to analyze image. Please try again.");
+      setError(
+        language.code === "en"
+          ? "Failed to analyze image. Please try again."
+          : "ניתוח התמונה נכשל. אנא נסה שוב."
+      );
       setFeedback(null);
     } finally {
       setLoading(false);
     }
   };
 
+  const toggleLanguage = () => {
+    setLanguage((prev) =>
+      prev.code === "en"
+        ? { code: "he", direction: "rtl" }
+        : { code: "en", direction: "ltr" }
+    );
+  };
+
   return (
     <View style={styles.container}>
+      <View style={styles.menuBar}>
+        <TouchableOpacity
+          style={styles.languageButton}
+          onPress={toggleLanguage}
+        >
+          <Ionicons name="globe-outline" size={24} color="#fff" />
+          <Text style={styles.languageText}>{language.code.toUpperCase()}</Text>
+        </TouchableOpacity>
+      </View>
+
       <View style={styles.header}>
-        <Text style={styles.title}>Photo Feedback</Text>
+        <Text style={styles.title}>
+          {language.code === "en" ? "Photo Feedback" : "משוב תמונה"}
+        </Text>
         <Text style={styles.titleAI}>AI</Text>
       </View>
 
       <Text style={styles.subtitle}>
-        Get professional feedback on your photos using AI
+        {language.code === "en"
+          ? "Get professional feedback on your photos using AI"
+          : "קבל משוב מקצועי על התמונות שלך באמצעות בינה מלאכותית"}
       </Text>
 
       <ScrollView style={styles.scrollContainer}>
@@ -219,7 +254,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "baseline",
-    marginTop: 80,
+    marginTop: 20,
     marginBottom: 20,
     paddingHorizontal: 20,
   },
@@ -357,5 +392,26 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "600",
+  },
+  languageButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "#5B5CFF",
+  },
+  languageText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+    marginLeft: 8,
+  },
+  menuBar: {
+    height: 50,
+    paddingHorizontal: 20,
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    alignItems: "center",
+    marginTop: 40,
   },
 });
