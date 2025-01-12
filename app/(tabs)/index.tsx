@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   StyleSheet,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { analyzePhoto } from "../../services/aiService";
@@ -22,52 +23,73 @@ interface FeedbackData {
   suggestions: string[];
 }
 
-export default function TabOneScreen() {
+export default function Index() {
   const [selectedImage, setSelectedImage] = useState<ImageAsset | null>(null);
   const [feedback, setFeedback] = useState<FeedbackData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleImageSelection = async () => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-
-    if (status !== "granted") {
-      alert("Sorry, we need camera roll permissions to make this work!");
-      return;
-    }
-
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 1,
-      allowsEditing: true,
-      aspect: [4, 3],
-    });
-
-    if (!result.canceled && result.assets && result.assets.length > 0) {
-      const asset = result.assets[0];
-      setSelectedImage({
-        uri: asset.uri,
-        width: asset.width || 0,
-        height: asset.height || 0,
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        quality: 1,
+        allowsEditing: true,
+        aspect: [4, 3],
+        base64: false,
+        exif: false,
+        presentationStyle: "fullScreen",
       });
-      setFeedback(null);
+
+      console.log("Image picker result:", result);
+
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const asset = result.assets[0];
+        console.log("Selected asset:", asset);
+
+        if (!asset.uri) {
+          throw new Error("No image URI received");
+        }
+
+        setSelectedImage({
+          uri: asset.uri,
+          width: asset.width || 0,
+          height: asset.height || 0,
+        });
+        setFeedback(null);
+        setError(null);
+      }
+    } catch (error) {
+      console.error("Error selecting image:", error);
+      alert(
+        "Please try selecting a different image or check if the image format is supported (JPEG, PNG)."
+      );
     }
   };
+
+  console.log("Current selectedImage:", selectedImage);
 
   const analyzeImage = async () => {
     if (!selectedImage) return;
 
     setLoading(true);
+    setError(null);
     try {
       const response = await analyzePhoto(selectedImage);
+      if (
+        response.positives.length === 0 &&
+        response.suggestions.length === 0
+      ) {
+        throw new Error("Failed to analyze image");
+      }
       setFeedback(response);
     } catch (error) {
       console.error("Error analyzing photo:", error);
-      setFeedback({
-        positives: ["Error analyzing photo"],
-        suggestions: ["Please try again"],
-      });
+      setError("Failed to analyze image. Please try again.");
+      setFeedback(null);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -91,27 +113,57 @@ export default function TabOneScreen() {
           </TouchableOpacity>
         ) : (
           <View>
-            <TouchableOpacity
-              style={styles.imageWrapper}
-              onPress={handleImageSelection}
-            >
-              <Image
-                source={{ uri: selectedImage.uri }}
-                style={styles.selectedImage}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
+            <View style={styles.imageWrapper}>
+              {selectedImage && (
+                <>
+                  <Image
+                    source={{ uri: selectedImage.uri }}
+                    style={styles.selectedImage}
+                    resizeMode="contain"
+                  />
+                  <TouchableOpacity
+                    style={styles.changeImageButton}
+                    onPress={handleImageSelection}
+                  >
+                    <Text style={styles.changeImageText}>Change Image</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </View>
 
-            <TouchableOpacity
-              style={styles.analyzeButton}
-              onPress={analyzeImage}
-            >
-              <Text style={styles.analyzeButtonText}>
-                {loading ? "Analyzing..." : "Analyze with AI"}
-              </Text>
-            </TouchableOpacity>
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Text style={styles.errorText}>{error}</Text>
+                <TouchableOpacity
+                  style={styles.retryButton}
+                  onPress={analyzeImage}
+                >
+                  <Text style={styles.retryButtonText}>Try Again</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[
+                  styles.analyzeButton,
+                  loading && styles.analyzeButtonDisabled,
+                ]}
+                onPress={analyzeImage}
+                disabled={loading}
+              >
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator color="#fff" />
+                    <Text style={[styles.analyzeButtonText, { marginLeft: 8 }]}>
+                      Analyzing...
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.analyzeButtonText}>Analyze with AI</Text>
+                )}
+              </TouchableOpacity>
+            )}
 
-            {feedback && (
+            {feedback && !error && (
               <View style={styles.feedbackContainer}>
                 <View style={styles.feedbackSection}>
                   <View style={styles.feedbackHeader}>
@@ -220,9 +272,40 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
   },
+  analyzeButtonDisabled: {
+    opacity: 0.7,
+  },
   analyzeButtonText: {
     color: "#fff",
     fontSize: 18,
+    fontWeight: "600",
+  },
+  loadingContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  errorContainer: {
+    padding: 16,
+    backgroundColor: "#FEE2E2",
+    borderRadius: 12,
+    marginVertical: 16,
+  },
+  errorText: {
+    color: "#DC2626",
+    fontSize: 16,
+    textAlign: "center",
+    marginBottom: 8,
+  },
+  retryButton: {
+    backgroundColor: "#DC2626",
+    padding: 8,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  retryButtonText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "600",
   },
   feedbackContainer: {
@@ -260,5 +343,19 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 12,
     lineHeight: 26,
+  },
+  changeImageButton: {
+    position: "absolute",
+    top: 16,
+    right: 16,
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  changeImageText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });
