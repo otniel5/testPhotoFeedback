@@ -71,7 +71,7 @@ export default function TabOneScreen() {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.title}>Photo Feedback</Text>
         <Text style={styles.titleAI}>AI</Text>
@@ -81,80 +81,95 @@ export default function TabOneScreen() {
         Get professional feedback on your photos using AI
       </Text>
 
-      {!selectedImage ? (
-        <TouchableOpacity
-          style={styles.selectButton}
-          onPress={handleImageSelection}
-        >
-          <Text style={styles.selectButtonText}>Select Image</Text>
-        </TouchableOpacity>
-      ) : (
-        <View>
-          <View style={styles.imageContainer}>
-            <Image
-              source={{ uri: selectedImage.uri }}
-              style={styles.selectedImage}
-              resizeMode="contain"
-            />
+      <ScrollView style={styles.scrollContainer}>
+        {!selectedImage ? (
+          <TouchableOpacity
+            style={styles.selectButton}
+            onPress={handleImageSelection}
+          >
+            <Text style={styles.selectButtonText}>Select Image</Text>
+          </TouchableOpacity>
+        ) : (
+          <View>
             <TouchableOpacity
-              style={styles.changeImageButton}
+              style={styles.imageWrapper}
               onPress={handleImageSelection}
             >
-              <Text style={styles.changeImageText}>Change Image</Text>
+              <Image
+                source={{ uri: selectedImage.uri }}
+                style={styles.selectedImage}
+                resizeMode="contain"
+              />
             </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.analyzeButton}
+              onPress={analyzeImage}
+            >
+              <Text style={styles.analyzeButtonText}>
+                {loading ? "Analyzing..." : "Analyze with AI"}
+              </Text>
+            </TouchableOpacity>
+
+            {feedback && (
+              <View style={styles.feedbackContainer}>
+                <View style={styles.feedbackSection}>
+                  <View style={styles.feedbackHeader}>
+                    <Ionicons name="thumbs-up" size={24} color="#4CAF50" />
+                    <Text style={styles.feedbackTitle}>What's Great</Text>
+                  </View>
+                  {feedback.positives.map((positive, index) => (
+                    <Text key={`positive-${index}`} style={styles.feedbackText}>
+                      {positive}
+                    </Text>
+                  ))}
+                </View>
+
+                <View
+                  style={[styles.feedbackSection, styles.suggestionsSection]}
+                >
+                  <View style={styles.feedbackHeader}>
+                    <Ionicons name="bulb" size={24} color="#5B5CFF" />
+                    <Text style={styles.feedbackTitle}>Suggestions</Text>
+                  </View>
+                  {feedback.suggestions.map((suggestion, index) => (
+                    <Text
+                      key={`suggestion-${index}`}
+                      style={styles.feedbackText}
+                    >
+                      {suggestion}
+                    </Text>
+                  ))}
+                </View>
+              </View>
+            )}
           </View>
-
-          <TouchableOpacity style={styles.analyzeButton} onPress={analyzeImage}>
-            <Text style={styles.analyzeButtonText}>
-              {loading ? "Analyzing..." : "Analyze with AI"}
-            </Text>
-          </TouchableOpacity>
-
-          {feedback && (
-            <View style={styles.feedbackContainer}>
-              <View style={styles.feedbackSection}>
-                <View style={styles.feedbackHeader}>
-                  <Ionicons name="thumbs-up" size={24} color="#4CAF50" />
-                  <Text style={styles.feedbackTitle}>What's Great</Text>
-                </View>
-                {feedback.positives.map((positive, index) => (
-                  <Text key={`positive-${index}`} style={styles.feedbackText}>
-                    {positive}
-                  </Text>
-                ))}
-              </View>
-
-              <View style={[styles.feedbackSection, styles.suggestionsSection]}>
-                <View style={styles.feedbackHeader}>
-                  <Ionicons name="bulb" size={24} color="#5B5CFF" />
-                  <Text style={styles.feedbackTitle}>Suggestions</Text>
-                </View>
-                {feedback.suggestions.map((suggestion, index) => (
-                  <Text key={`suggestion-${index}`} style={styles.feedbackText}>
-                    {suggestion}
-                  </Text>
-                ))}
-              </View>
-            </View>
-          )}
-        </View>
-      )}
-    </ScrollView>
+        )}
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: "#fff",
+  },
+  scrollContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  bottomPadding: {
+    height: 40,
   },
   header: {
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "baseline",
-    marginTop: 40,
+    marginTop: 80,
     marginBottom: 20,
+    paddingHorizontal: 20,
   },
   title: {
     fontSize: 40,
@@ -175,45 +190,33 @@ const styles = StyleSheet.create({
     backgroundColor: "#5B5CFF",
     paddingHorizontal: 30,
     paddingVertical: 15,
-    borderRadius: 12,
+    borderRadius: 25,
     alignItems: "center",
-    marginTop: 20,
+    marginTop: 60,
+    alignSelf: "center",
+    minWidth: 200,
   },
   selectButtonText: {
     fontSize: 18,
     color: "#fff",
     fontWeight: "600",
   },
-  imageContainer: {
+  imageWrapper: {
     width: "100%",
     height: 400,
     marginBottom: 20,
-    borderRadius: 12,
+    borderRadius: 25,
     overflow: "hidden",
-    position: "relative",
   },
   selectedImage: {
     width: "100%",
     height: "100%",
-  },
-  changeImageButton: {
-    position: "absolute",
-    top: 16,
-    right: 16,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  changeImageText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
+    borderRadius: 25,
   },
   analyzeButton: {
     backgroundColor: "#5B5CFF",
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 25,
     alignItems: "center",
     marginBottom: 20,
   },
@@ -227,7 +230,7 @@ const styles = StyleSheet.create({
   },
   feedbackSection: {
     backgroundColor: "#fff",
-    borderRadius: 12,
+    borderRadius: 25,
     padding: 20,
     marginBottom: 20,
     shadowColor: "#000",
