@@ -72,10 +72,7 @@ export const analyzePhoto = async (photo: { uri: string }) => {
     const imagePart = await fileToGenerativePart(photo.uri);
     console.log("Image converted successfully to GenerativePart");
 
-    const prompt = `Analyze this photo and provide feedback in two clear sections:
-    1. **Positives**: Describe what's great about the photo, focusing on aspects such as composition, lighting, focus, etc.
-    2. **Suggestions**: Provide specific and actionable suggestions for improvement. Keep the suggestions raw, concise, and constructive.
-    
+    const prompt = `Share 2 things that work well in this photo and 3 quick tips to make it even better:.
     Return the feedback exactly in this format:
     Positives:
     - [Positive aspect 1]
